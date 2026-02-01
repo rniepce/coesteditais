@@ -1,5 +1,4 @@
 import os
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,9 +8,15 @@ class EditalGenerator:
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             raise ValueError("API Key not found. Please provide it in the sidebar or .env file.")
-        
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.model = None
+
+    def _get_model(self):
+        """Lazy initialization of the Gemini model to avoid import-time errors."""
+        if self.model is None:
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
+        return self.model
 
     def generate_edital(self, params, context_text=""):
         """
@@ -46,7 +51,8 @@ class EditalGenerator:
         """
 
         try:
-            response = self.model.generate_content(prompt)
+            model = self._get_model()
+            response = model.generate_content(prompt)
             return response.text
         except Exception as e:
             return f"Erro ao gerar o edital: {str(e)}"
